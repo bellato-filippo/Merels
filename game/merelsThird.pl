@@ -117,7 +117,7 @@ play :- welcome,                        % displays welcome message
         initial_board(Board),           % unifies to get the empty Board
         display_board(Board),           % displays the Board
         is_player1(Player),             % unifies to get Player 1
-        play(12, Player, Board).        % calls play/3 with 18 merels
+        play(18, Player, Board).        % calls play/3 with 18 merels
 
 % Succeeds if there there are no merels to be placed and there is a winner on the board
 % Checks if both players are winning on the Board
@@ -127,6 +127,10 @@ play(0, Player, Board) :- other_player(Player, OtherPlayer),
                           and_the_winner_is(Board, OtherPlayer),
                           report_winner(OtherPlayer).
 
+
+% ----------------------------------------------------------------------------------------------------------------------------------------------------
+% code for section 3.6
+/*
 % Succeeds if there are no merels to be placed
 play(0, Player, Board) :- get_legal_move(Player, OldPoint, NewPoint, Board),    % gets a legal move. Player moves from OldPoint to NewPoint
                           play(0, Player, Board, OldPoint, NewPoint).           % calls play/5 with the OldPoint and NewPoint
@@ -173,3 +177,131 @@ play(Merels, Player, Board, Point) :- append(Board, [p(Point, Player)], NewBoard
                                LessMerels is Merels - 1,                                        % decreases the number of merels left by 1
                                display_board(NewBoard),                                         % displays the board
                                play(LessMerels, OtherPlayer, NewBoard).                         % recurses with the new amount of merels, the other player and the updated board
+*/
+% ----------------------------------------------------------------------------------------------------------------------------------------------------
+
+% Succeeds if there are no merels to be placed and it's player1 to move
+play(0, Player, Board) :- is_player1(Player),
+                          get_legal_move(Player, OldPoint, NewPoint, Board),    % gets a legal move. Player moves from OldPoint to NewPoint
+                          play(0, Player, Board, OldPoint, NewPoint).           % calls play/5 with the OldPoint and NewPoint
+
+% Succeeds if there are no merels to be placed and it's player2 to move
+play(0, Player, Board) :- is_player2(Player),
+                          choose_move(Player, OldPoint, NewPoint, Board),       % gets a legal move. Player moves from OldPoint to NewPoint
+                          report_move(Player, OldPoint, NewPoint),
+                          play(0, Player, Board, OldPoint, NewPoint).           % calls play/5 with the OldPoint and NewPoint
+
+% Succeeds if there are still merels to be placed and it's player1 to move
+play(Merels, Player, Board) :- is_player1(Player),
+                               get_legal_place(Player, Point, Board),           % gets a legal place. Player places a merel on Point
+                               play(Merels, Player, Board, Point).              % calls play/4 with the Point
+
+% Succeeds if there are still merels to be placed and it's player2 to move
+play(Merels, Player, Board) :- is_player2(Player),
+                               choose_place(Player, Point, Board),              % gets a legal place. Player places a merel on Point
+                               report_move(Player, Point),
+                               play(Merels, Player, Board, Point).              % calls play/4 with the Point
+
+% Succeeds if there are no more merels to be placed and there is a mill after the Player moved the merel from OldPoint to NewPoint
+play(0, Player, Board, OldPoint, NewPoint) :- is_player1(Player),
+                          other_player(Player, OtherPlayer),                                    % unifies to get OtherPlayer
+                          append(Board, [p(NewPoint, Player)], NewBoard),                       % adds the new pair with the new Point to the Board
+                          delete(NewBoard, p(OldPoint, Player), NewerBoard),                    % removes the pair with the old Point from the board
+                          is_mill(NewerBoard, Player, NewPoint),                                % succeeds if there is a mill on NewPoint
+                          get_remove_point(Player, PointToRemove, NewerBoard),                  % asks the user for a valid point to remove
+                          delete(NewerBoard, p(PointToRemove, OtherPlayer), NewerErBoard),      % removes the PointToRemove from the Board
+                          display_board(NewerErBoard),                                          % displays the board
+                          play(0, OtherPlayer, NewerErBoard).                                   % recurses with the OtherPlayer and the updated board
+
+% Succeeds if there are no more merels to be placed and there is a mill after the Player moved the merel from OldPoint to NewPoint
+play(0, Player, Board, OldPoint, NewPoint) :- is_player2(Player),
+                          other_player(Player, OtherPlayer),                                    % unifies to get OtherPlayer
+                          append(Board, [p(NewPoint, Player)], NewBoard),                       % adds the new pair with the new Point to the Board
+                          delete(NewBoard, p(OldPoint, Player), NewerBoard),                    % removes the pair with the old Point from the board
+                          is_mill(NewerBoard, Player, NewPoint),                                % succeeds if there is a mill on NewPoint
+                          choose_remove(Player, PointToRemove, NewerBoard),                     % asks the user for a valid point to remove
+                          report_remove(Player, PointToRemove),
+                          delete(NewerBoard, p(PointToRemove, OtherPlayer), NewerErBoard),      % removes the PointToRemove from the Board
+                          display_board(NewerErBoard),                                          % displays the board
+                          play(0, OtherPlayer, NewerErBoard).                                   % recurses with the OtherPlayer and the updated board
+
+% Succeeds if there are no more merels to be placed and there is not a mill after the Player moved the merel from OldPoint to NewPoint
+play(0, Player, Board, OldPoint, NewPoint) :- is_player1(Player),
+                          other_player(Player, OtherPlayer),                                    % unifies to get OtherPlayer
+                          append(Board, [p(NewPoint, Player)], NewBoard),                       % adds the new pair with the new Point to the Board
+                          delete(NewBoard, p(OldPoint, Player), NewerBoard),                    % removes the pair with the old Point from the board
+                          \+ (is_mill(NewerBoard, Player, NewPoint)),                           % succeeds if there are no mills on NewPoint
+                          display_board(NewerBoard),                                            % displays board
+                          play(0, OtherPlayer, NewerBoard).                                     % recurses with OtherPlayer and the updated board
+
+% Succeeds if there are no more merels to be placed and there is not a mill after the Player moved the merel from OldPoint to NewPoint
+play(0, Player, Board, OldPoint, NewPoint) :- is_player2(Player),
+                          other_player(Player, OtherPlayer),                                    % unifies to get OtherPlayer
+                          append(Board, [p(NewPoint, Player)], NewBoard),                       % adds the new pair with the new Point to the Board
+                          delete(NewBoard, p(OldPoint, Player), NewerBoard),                    % removes the pair with the old Point from the board
+                          \+ (is_mill(NewerBoard, Player, NewPoint)),                           % succeeds if there are no mills on NewPoint
+                          display_board(NewerBoard),                                            % displays board
+                          play(0, OtherPlayer, NewerBoard).                                     % recurses with OtherPlayer and the updated board
+                               
+
+% Succeeds if there are merels left to place and there is a mill after the Player placed the merel in Point
+play(Merels, Player, Board, Point) :- is_player1(Player),
+                               append(Board, [p(Point, Player)], NewBoard),                     % adds the new pair with the new point to the Board
+                               other_player(Player, OtherPlayer),                               % unifies to get the OtherPlayer
+                               is_mill(NewBoard, Player, Point),                                % succeeds if there is a mill on Point
+                               get_remove_point(Player, PointToRemove, NewBoard),               % asks the user for a valid point to remove
+                               delete(NewBoard, p(PointToRemove, OtherPlayer), NewerBoard),     % removes the PointToRemove from the Board
+                               LessMerels is Merels - 1,                                        % descreases the number of merels left by 1
+                               display_board(NewerBoard),                                       % displays board
+                               play(LessMerels, OtherPlayer, NewerBoard).                       % recurses with the new amount of merels, the other player and the updated board
+
+% Succeeds if there are merels left to place and there is a mill after the Player placed the merel in Point
+play(Merels, Player, Board, Point) :- is_player2(Player),
+                               append(Board, [p(Point, Player)], NewBoard),                     % adds the new pair with the new point to the Board
+                               other_player(Player, OtherPlayer),                               % unifies to get the OtherPlayer
+                               is_mill(NewBoard, Player, Point),                                % succeeds if there is a mill on Point
+                               choose_remove(Player, PointToRemove, NewBoard),                  % asks the user for a valid point to remove
+                               report_remove(Player, PointToRemove),
+                               delete(NewBoard, p(PointToRemove, OtherPlayer), NewerBoard),     % removes the PointToRemove from the Board
+                               LessMerels is Merels - 1,                                        % descreases the number of merels left by 1
+                               display_board(NewerBoard),                                       % displays board
+                               play(LessMerels, OtherPlayer, NewerBoard).                       % recurses with the new amount of merels, the other player and the updated board
+
+% Succeeds if there are merels left to place and there is not a mill after the Player placed the merel in Point
+play(Merels, Player, Board, Point) :- is_player1(Player),
+                               append(Board, [p(Point, Player)], NewBoard),                     % adds the new pair with the new point to the Board
+                               \+ (is_mill(NewBoard, Player, Point)),                           % succeeds if there are no mills on Point
+                               other_player(Player, OtherPlayer),                               % unifies to get the OtherPlayer
+                               LessMerels is Merels - 1,                                        % decreases the number of merels left by 1
+                               display_board(NewBoard),                                         % displays the board
+                               play(LessMerels, OtherPlayer, NewBoard).
+
+% Succeeds if there are merels left to place and there is not a mill after the Player placed the merel in Point
+play(Merels, Player, Board, Point) :- is_player2(Player),
+                               append(Board, [p(Point, Player)], NewBoard),              % adds the new pair with the new point to the Board
+                               \+ (is_mill(NewBoard, Player, Point)),                           % succeeds if there are no mills on Point
+                               other_player(Player, OtherPlayer),                               % unifies to get the OtherPlayer
+                               LessMerels is Merels - 1,                                        % decreases the number of merels left by 1
+                               display_board(NewBoard),                                         % displays the board
+                               play(LessMerels, OtherPlayer, NewBoard).
+
+
+
+% ----------------------------------------------------------------------------------------------------------------------------------------------------
+% Heuristics
+% dumbly choose a point
+choose_place( _Player, Point, Board ) :-
+                        connected( Point, _ ),
+                        empty_point( Point, Board ).
+
+% dumbly choose a move
+choose_move( Player, OldPoint, NewPoint, Board ) :-
+                        pair( Pair, OldPoint, Player ),
+                        merel_on_board( Pair, Board ),
+                        connected( OldPoint, NewPoint ),
+                        empty_point( NewPoint, Board ).
+
+% dumbly choose a removal
+choose_remove( Player, Point, Board ) :-
+                        pair( Pair, Point, Player ),
+                        merel_on_board( Pair, Board ).
